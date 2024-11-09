@@ -10,23 +10,23 @@ SECTION .text
         push rax
 
         ; display "....WOODY....\n"
-        mov rsi, 0x0a2e2e2e2e59 ; Y....\n
-        push rsi
-        mov rsi, 0x444f4f572e2e2e2e ; ...WOOD
-        push rsi
         mov rdi, 1
-        mov rdx, 14
-        mov rsi, rsp
+        mov rdx, woody_len
+        lea rsi, [rel woody_str]
+        ;mov rsi, rsp
         mov rax, 1
         syscall
 
         ; TODO: decrypt .text
 
         ; restore registers
-        sub rsp, 16
         pop rax
         pop rdx
         pop rsi
 
         ; jmp to the entry point
         jmp 0x44444448
+
+        woody_str:
+        db "...WOODY...", 0x0A
+        woody_len equ $ - woody_str
