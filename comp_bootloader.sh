@@ -1,6 +1,7 @@
 #!/bin/sh
 
-nasm -f bin -o bootloader bootloader.asm
+nasm -f elf64 -o .bootloader.obj bootloader.asm
+objcopy .bootloader.obj -O binary bootloader
 
 cat > bootloader.h << EOF 
 #ifndef BOOTLOADER_H
@@ -12,3 +13,5 @@ xxd --include bootloader >> bootloader.h
 cat >> bootloader.h << EOF 
 #endif
 EOF
+
+rm .bootloader.obj bootloader

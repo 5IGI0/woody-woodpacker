@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,12 @@
 #include "bootloader.h"
 
 #define ROUND(x) (((((uintptr_t)(x))-1)|0xFFF) + 1)
+
+#define PLACEHOLDER_ENTRY 0x44444444
+
+uint32_t *find_32_placeholder(uint32_t placeholder, void *bootloader_start, size_t bl_len) {
+    return memmem(bootloader_start, bl_len, &placeholder, sizeof(uint32_t));
+}
 
 int main(int argc, char **argv) {
     assert(argc == 2);
@@ -90,9 +97,12 @@ int main(int argc, char **argv) {
     /* ADD THE BOOTLOADER */
     memcpy(elf + bootloader_offset, bootloader, bootloader_len); // TODO: encrypt/decrypt .text
 
+    uintptr_t old_entry = hdr->e_entry;
     hdr->e_entry = available_vaddr + (bootloader_offset - ph_offset); // update the entrypoint
 
-    printf("%zx\n", hdr->e_entry);
+    /* FIND & CHANGE PLACEHOLDERS */
+    uint32_t *plch = find_32_placeholder(PLACEHOLDER_ENTRY, elf+bootloader_offset, bootloader_len);
+    *plch = -(intptr_t)(hdr->e_entry - old_entry + (((char *)plch) - (elf + bootloader_offset)) + 4); // TODO: better readability
 
     /* write */
     fp = fopen("packed", "wb");
