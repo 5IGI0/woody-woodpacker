@@ -1,7 +1,10 @@
 bits 64
 
-SECTION .text
-    bootloader:
+global bootloader_64
+global bootloader_64_len
+
+SECTION .data
+    bootloader_64:
         ; save initial registers' values
         push rsi
         push rdx
@@ -20,7 +23,7 @@ SECTION .text
         ; RDX = .text size
         ; RSI = offset
         ; RBX = temp memory
-        lea rax, [rel bootloader]
+        lea rax, [rel bootloader_64]
         sub rax, 0x33333333
         mov rdx, 0x22222222
         xor rsi, rsi
@@ -45,3 +48,7 @@ SECTION .text
         woody_str:
         db "...WOODY...", 0x0A
         woody_len equ $ - woody_str
+        bootloader_64_len:
+        db DWORD $ - bootloader_64
+
+SECTION .note.GNU-stack

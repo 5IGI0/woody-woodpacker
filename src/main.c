@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
     uintptr_t ph_offset         = ROUND(size);
     uintptr_t bootloader_offset = ROUND(ph_offset + ((hdr->e_phnum + 1) * hdr->e_phentsize));
-    size = ROUND(bootloader_offset + bootloader_len);
+    size = ROUND(bootloader_offset + bootloader_64_len);
 
     printf(
         "new size: %zx\n"
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
                 text_hdr = shdr;
         }
 
-        printf(".text vaddr/size: %p/%zu\n", text_hdr->sh_addr, text_hdr->sh_size);
+        printf(".text vaddr/size: %p/%zu\n", (char *)text_hdr->sh_addr, text_hdr->sh_size);
     }
 
     /* ENCRYPT .text */
@@ -126,23 +126,23 @@ int main(int argc, char **argv) {
     }
 
     /* ADD THE BOOTLOADER */
-    memcpy(elf + bootloader_offset, bootloader, bootloader_len); // TODO: encrypt/decrypt .text
+    memcpy(elf + bootloader_offset, bootloader_64, bootloader_64_len); // TODO: encrypt/decrypt .text
 
     uintptr_t old_entry = hdr->e_entry;
     hdr->e_entry = available_vaddr + (bootloader_offset - ph_offset); // update the entrypoint
 
     /* FIND & CHANGE PLACEHOLDERS */
-    uint32_t *plch = find_32_placeholder(PLACEHOLDER_ENTRY, elf+bootloader_offset, bootloader_len);
+    uint32_t *plch = find_32_placeholder(PLACEHOLDER_ENTRY, elf+bootloader_offset, bootloader_64_len);
     *plch = -(intptr_t)(hdr->e_entry - old_entry + (((char *)plch) - (elf + bootloader_offset)) + 4); // TODO: better readability
 
-    plch = find_32_placeholder(PLACEHOLDER_TEXT_OFF, elf+bootloader_offset, bootloader_len);
+    plch = find_32_placeholder(PLACEHOLDER_TEXT_OFF, elf+bootloader_offset, bootloader_64_len);
     *plch = hdr->e_entry - text_hdr->sh_addr;
 
-    plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_len);
+    plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_64_len);
     *plch = text_hdr->sh_size;
 
     /* write */
-    fp = fopen("packed", "wb");
+    fp = fopen("woody", "wb");
     fwrite(elf, 1, size, fp);
     fclose(fp);
 
