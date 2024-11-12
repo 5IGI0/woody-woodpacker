@@ -1,7 +1,7 @@
 TARGET = ./woody_woodpacker
-C_SRCS = src/main.c
+C_SRCS = src/main.c src/pack.c src/ft.c src/pack_utils.c
 S_SRCS = src/bootloader/x86_64.s
-CFLAGS = -Wall -Wextra -Werror -g3
+CFLAGS = -Wall -Wextra -Werror -O0 -g3
 OBJS   = $(C_SRCS:.c=.o) $(S_SRCS:.s=.o)
 CC     = gcc -m64
 NASM   = nasm -f elf64
