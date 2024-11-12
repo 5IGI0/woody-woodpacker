@@ -13,8 +13,20 @@
 #include "bootloader.h"
 #include "pack.h"
 
-static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t output_size, uintptr_t ph_offset, const Elf64_Shdr *text_hdr) {
-    Elf64_Ehdr *hdr = (Elf64_Ehdr *)elf;
+#ifdef TARGET_64
+#define ElfT(x) Elf64_##x
+#define bootloader bootloader_64
+#define bootloader_len bootloader_64_len
+#define pack_elf pack_elf64
+#else
+#define ElfT(x) Elf32_##x
+#define bootloader bootloader_32
+#define bootloader_len bootloader_32_len
+#define pack_elf pack_elf32
+#endif
+
+static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t output_size, uintptr_t ph_offset, const ElfT(Shdr) *text_hdr) {
+    ElfT(Ehdr) *hdr = (ElfT(Ehdr) *)elf;
 
     ASSERT_OFFSET(hdr->e_phoff, hdr->e_phnum, hdr->e_phentsize, size, 0);
 
@@ -24,10 +36,10 @@ static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t o
 
     /* FIX PT_PHDR / FIND FREE VADDR / PATCH .text PH */
     uintptr_t available_vaddr = 0;
-    Elf64_Phdr *phtbl_hdr = NULL;
+    ElfT(Phdr) *phtbl_hdr = NULL;
 
     for (size_t i = 0; i < hdr->e_phnum; i++) {
-        Elf64_Phdr *phdr = (Elf64_Phdr *)(elf  + hdr->e_phoff + (i * hdr->e_phentsize));
+        ElfT(Phdr) *phdr = (ElfT(Phdr) *)(elf  + hdr->e_phoff + (i * hdr->e_phentsize));
 
         if (phdr->p_type == PT_LOAD) {
             if ((phdr->p_vaddr + phdr->p_memsz) > available_vaddr) {
@@ -61,7 +73,7 @@ static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t o
         write(2, "invalid program headers.\n", 25);
     else {
         /* it will store the ph and the bootloader because too lazy to do 2 phs. */
-        Elf64_Phdr *phdr = (Elf64_Phdr *)(elf + hdr->e_phoff + (hdr->e_phentsize * hdr->e_phnum));
+        ElfT(Phdr) *phdr = (ElfT(Phdr) *)(elf + hdr->e_phoff + (hdr->e_phentsize * hdr->e_phnum));
         phdr->p_type    = PT_LOAD;
         phdr->p_offset  = ph_offset;
         phdr->p_vaddr   = available_vaddr;
@@ -76,9 +88,9 @@ static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t o
     return available_vaddr;
 }
 
-static const Elf64_Shdr *find_text(const char *elf, size_t size) {
-    const Elf64_Ehdr *hdr       = (Elf64_Ehdr *)elf;
-    const Elf64_Shdr *shdr      = (Elf64_Shdr *)(elf + hdr->e_shoff + (hdr->e_shentsize * hdr->e_shstrndx));
+static const ElfT(Shdr) *find_text(const char *elf, size_t size) {
+    const ElfT(Ehdr) *hdr       = (ElfT(Ehdr) *)elf;
+    const ElfT(Shdr) *shdr      = (ElfT(Shdr) *)(elf + hdr->e_shoff + (hdr->e_shentsize * hdr->e_shstrndx));
     const char       *sec_names = NULL;
     size_t           sec_namesz = 0;
 
@@ -99,7 +111,7 @@ static const Elf64_Shdr *find_text(const char *elf, size_t size) {
         return NULL;
 
     for (size_t i = 0; i < hdr->e_shnum; i++) {
-        shdr = (const Elf64_Shdr *)(elf + hdr->e_shoff + (i * hdr->e_shentsize));
+        shdr = (const ElfT(Shdr) *)(elf + hdr->e_shoff + (i * hdr->e_shentsize));
 
         if (shdr->sh_name > (sec_namesz - sizeof(".text")))
             continue;
@@ -111,8 +123,8 @@ static const Elf64_Shdr *find_text(const char *elf, size_t size) {
     return NULL;
 }
 
-static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintptr_t bootloader_offset, Elf64_Shdr *text_hdr) {
-    Elf64_Ehdr *hdr = (Elf64_Ehdr *)elf;
+static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintptr_t bootloader_offset, ElfT(Shdr) *text_hdr) {
+    ElfT(Ehdr) *hdr = (ElfT(Ehdr) *)elf;
 
     /* ENCRYPT .text */
     text_hdr->sh_flags |= SHF_WRITE;
@@ -121,24 +133,24 @@ static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintp
     }
 
     /* ADD THE BOOTLOADER */
-    ft_memcpy(elf + bootloader_offset, bootloader_64, bootloader_64_len);
+    ft_memcpy(elf + bootloader_offset, bootloader, bootloader_len);
     uintptr_t old_entry = hdr->e_entry;
     hdr->e_entry = bootloader_vaddr;
 
     /* FIND & CHANGE PLACEHOLDERS */
-    uint32_t *plch = find_32_placeholder(PLACEHOLDER_ENTRY, elf+bootloader_offset, bootloader_64_len);
-    *plch = -(intptr_t)(hdr->e_entry - old_entry + (((char *)plch) - (elf + bootloader_offset)) + 4); // TODO: better readability
-    plch = find_32_placeholder(PLACEHOLDER_TEXT_OFF, elf+bootloader_offset, bootloader_64_len);
+    uint32_t *plch = find_32_placeholder(PLACEHOLDER_ENTRY, elf+bootloader_offset, bootloader_len);
+    *plch = -(intptr_t)(hdr->e_entry - old_entry + (((char *)plch) - (elf + bootloader_offset)) + 4);
+    plch = find_32_placeholder(PLACEHOLDER_TEXT_OFF, elf+bootloader_offset, bootloader_len);
     *plch = hdr->e_entry - text_hdr->sh_addr;
-    plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_64_len);
+    plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_len);
     *plch = text_hdr->sh_size;
 }
 
 int pack_elf(const char *input_elf, size_t input_size) {
     char             *elf;
     size_t           elf_size;
-    Elf64_Shdr       *text_hdr;
-    Elf64_Ehdr       *hdr = (Elf64_Ehdr *)input_elf;
+    ElfT(Shdr)       *text_hdr;
+    ElfT(Ehdr)       *hdr = (ElfT(Ehdr) *)input_elf;
 
     /* CHECK THAT AN ENTRYPOINT IS PRESENT */
     if (hdr->e_entry == 0) {
@@ -149,17 +161,17 @@ int pack_elf(const char *input_elf, size_t input_size) {
     /* COMPUTE OUTPUT ELF SIZE */
     uintptr_t ph_offset         = ROUND(input_size);
     uintptr_t bootloader_offset = ROUND(ph_offset + ((hdr->e_phnum + 1) * hdr->e_phentsize));
-    elf_size = ROUND(bootloader_offset + bootloader_64_len);
+    elf_size = ROUND(bootloader_offset + bootloader_len);
 
     if ((elf = malloc(elf_size)) == NULL) {
         perror("malloc()");
         return -1;
     }
-    hdr = (Elf64_Ehdr *)elf;
+    hdr = (ElfT(Ehdr) *)elf;
     ft_memcpy(elf, input_elf, input_size);
     ft_memset(elf+input_size, 0, elf_size-input_size);
 
-    if ((text_hdr = (Elf64_Shdr *)find_text(input_elf, input_size)) == NULL) {
+    if ((text_hdr = (ElfT(Shdr) *)find_text(input_elf, input_size)) == NULL) {
         free(elf);
         return -1;
     }

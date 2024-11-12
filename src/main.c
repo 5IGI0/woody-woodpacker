@@ -9,8 +9,7 @@
 #include <fcntl.h>
 
 #include <elf.h>
-
-int pack_elf(const char *input_elf, size_t input_size);
+#include "pack.h"
 
 int main(int argc, char **argv) {
     int     ifd      = 0;
@@ -64,16 +63,20 @@ int main(int argc, char **argv) {
     }
 
     if (
-        hdr->e_ident[EI_CLASS] != ELFCLASS64 ||
+        // hdr->e_ident[EI_CLASS] != ELFCLASS64 ||
         hdr->e_ident[EI_DATA] != ELFDATA2LSB ||
-        hdr->e_machine != EM_X86_64) {
+        (hdr->e_machine != EM_X86_64 && hdr->e_machine != EM_386)) {
         free(elf);
         write(2, "unsupported architecture.\n", 26);
         return 1;
     }
 
-    int ret = pack_elf(elf, elf_size);
-    free(elf);
+    int ret = 0;
+    if (hdr->e_machine == EM_X86_64)
+        ret = pack_elf64(elf, elf_size);
+    else
+        ret = pack_elf32(elf, elf_size);
 
+    free(elf);
     return ret != 0;
 }

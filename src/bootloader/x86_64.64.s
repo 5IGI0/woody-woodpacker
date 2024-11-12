@@ -46,7 +46,7 @@ SECTION .data
         jmp 0x44444448 ; + 4 because nasm sub 4
 
         woody_str:
-        db "...WOODY...", 0x0A
+        db "....WOODY....", 0x0A
         woody_len equ $ - woody_str
         bootloader_64_len:
         db DWORD $ - bootloader_64
