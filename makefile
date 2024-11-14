@@ -36,6 +36,6 @@ clean: .PH0NY
 	rm -f ${OBJS}
 
 fclean: clean .PH0NY
-	rm -f ${TARGET}
+	rm -f ${TARGET} woody
 
 .PH0NY:

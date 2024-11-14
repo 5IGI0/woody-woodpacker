@@ -8,6 +8,7 @@
 #define ROUND(x) (((((uintptr_t)(x))-1)|0xFFF) + 1)
 
 uint32_t *find_32_placeholder(uint32_t placeholder, void *bootloader_start, size_t bl_len);
+char *find_128_placeholder(char  *placeholder, void *bootloader_start, size_t bl_len);
 int check_offset(uintptr_t offset, uintptr_t elem_count, uintptr_t elem_size, uintptr_t size);
 
 #define ASSERT_OFFSET(offset, elem_count, elem_size, size, ret)     \

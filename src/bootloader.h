@@ -5,6 +5,7 @@
 #define PLACEHOLDER_ENTRY 0x44444444
 #define PLACEHOLDER_TEXT_OFF 0x33333333
 #define PLACEHOLDER_TEXT_SIZE 0x22222222
+#define PLACEHOLDER_XOR_KEY "19-45-kouks14-88"
 
 extern unsigned char bootloader_64[];
 extern uint32_t bootloader_64_len;

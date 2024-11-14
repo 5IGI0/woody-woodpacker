@@ -7,6 +7,10 @@ uint32_t *find_32_placeholder(uint32_t placeholder, void *bootloader_start, size
     return (uint32_t *)ft_memmem(bootloader_start, bl_len, &placeholder, sizeof(uint32_t));
 }
 
+char *find_128_placeholder(char *placeholder, void *bootloader_start, size_t bl_len) {
+    return (char *)ft_memmem(bootloader_start, bl_len, placeholder, 16);
+}
+
 int check_offset(uintptr_t offset, uintptr_t elem_count, uintptr_t elem_size, uintptr_t size) {
     /* check elem size / elem_size*elem_count overflow */
     if (

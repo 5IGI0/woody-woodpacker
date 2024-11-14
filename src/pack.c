@@ -125,11 +125,11 @@ static const ElfT(Shdr) *find_text(const char *elf, size_t size) {
 
 static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintptr_t bootloader_offset, ElfT(Shdr) *text_hdr) {
     ElfT(Ehdr) *hdr = (ElfT(Ehdr) *)elf;
-
+    unsigned char key[16] = "mexicankouks.gob";
     /* ENCRYPT .text */
     text_hdr->sh_flags |= SHF_WRITE;
     for (size_t i = 0; i < text_hdr->sh_size; i++) {
-        elf[text_hdr->sh_offset + i] ^= 0x58;
+        elf[text_hdr->sh_offset + i] ^= key[i % sizeof(key)];
     }
 
     /* ADD THE BOOTLOADER */
@@ -144,8 +144,8 @@ static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintp
     *plch = hdr->e_entry - text_hdr->sh_addr;
     plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_len);
     *plch = text_hdr->sh_size;
+    ft_memcpy(find_128_placeholder(PLACEHOLDER_XOR_KEY, elf+bootloader_offset, bootloader_len), key, sizeof(key));
 }
-
 int pack_elf(const char *input_elf, size_t input_size) {
     char             *elf;
     size_t           elf_size;
