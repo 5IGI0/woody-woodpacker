@@ -10,6 +10,8 @@
 uint32_t *find_32_placeholder(uint32_t placeholder, void *bootloader_start, size_t bl_len);
 char *find_128_placeholder(char  *placeholder, void *bootloader_start, size_t bl_len);
 int check_offset(uintptr_t offset, uintptr_t elem_count, uintptr_t elem_size, uintptr_t size);
+void bin2hex(char *out, unsigned char const *in, size_t inlen);
+void print_key(unsigned char *key);
 
 #define ASSERT_OFFSET(offset, elem_count, elem_size, size, ret)     \
     if (check_offset(                                               \

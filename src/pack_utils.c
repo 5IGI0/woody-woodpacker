@@ -35,3 +35,19 @@ int check_offset(uintptr_t offset, uintptr_t elem_count, uintptr_t elem_size, ui
 
     return 0;
 }
+
+void bin2hex(char *out, unsigned char const *in, size_t inlen) {
+  for (size_t i = 0; i < inlen; i++) {
+    out[i*2] = "0123456789abcdef"[in[i]&0xF];
+    out[i*2+1] = "0123456789abcdef"[in[i]>>4];
+  }
+}
+
+void print_key(unsigned char *key)
+{
+    write(1 ,"key: ", 6);
+    char str_key[32];
+    bin2hex(str_key, key, 16);
+    write(1, str_key, 32);
+    write(1, "\n", 1);
+}

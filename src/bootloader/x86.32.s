@@ -28,10 +28,14 @@ SECTION .data
         sub eax, 0x33333333
         mov edx, 0x22222222
         xor esi, esi
-
+        lea edi, [edi + xor_key]
+        ;r9 edi r13 ecx
         decrypt_loop:
-            mov bl, byte [eax+esi]
-            xor bl, 0x58
+            mov ecx, esi
+            and ecx, 0xF
+            mov cl, byte [edi + ecx]
+            mov bl, byte [eax + esi]
+            xor bl, cl
             mov byte [eax+esi], bl
             inc esi
             cmp esi, edx
@@ -43,6 +47,8 @@ SECTION .data
     
     woody_str:
         db "....WOODY....", 0x0A
+    xor_key:
+            db "19-45-kouks14-88"
     bootloader_32_len:
         db DWORD $ - bootloader_32
 
