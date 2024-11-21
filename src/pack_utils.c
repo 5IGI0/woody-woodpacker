@@ -38,8 +38,8 @@ int check_offset(uintptr_t offset, uintptr_t elem_count, uintptr_t elem_size, ui
 
 void bin2hex(char *out, unsigned char const *in, size_t inlen) {
   for (size_t i = 0; i < inlen; i++) {
-    out[i*2] = "0123456789abcdef"[in[i]&0xF];
-    out[i*2+1] = "0123456789abcdef"[in[i]>>4];
+    out[i*2] = "0123456789abcdef"[in[i]>>4];
+    out[i*2+1] = "0123456789abcdef"[in[i]&0xF];
   }
 }
 

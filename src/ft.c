@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stddef.h>
 
 int ft_memcmp(const void *a, const void *b, size_t n) {
     for (size_t i = 0; i < n; i++) {
@@ -38,4 +38,10 @@ void *ft_memset(void *dst, int c, size_t n) {
     }
 
     return dst;
+}
+
+size_t ft_strlen(char const *str) {
+    size_t ret = 0;
+    while (str[ret]) ret++;
+    return ret;
 }

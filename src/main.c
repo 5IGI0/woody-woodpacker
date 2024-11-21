@@ -1,23 +1,52 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <assert.h>
 
 #include <unistd.h>
 #include <fcntl.h>
 
 #include <elf.h>
+
 #include "pack.h"
+#include "ft.h"
+#include "utils.h"
+
+int get_key(unsigned char *key, int argc, char **argv) {
+    if (argc == 2) {
+        int fd = open("/dev/urandom", O_RDONLY);
+        if (fd < 0) {
+            perror("/dev/urandom");
+            return -1;
+        }
+        if (read(fd, key, 16) < 0) {
+            perror("/dev/urandom");
+            close(fd);
+            return -1;
+        }
+        close(fd);
+    } else {
+        if (ft_strlen(argv[2]) != 32) {
+            write(2, "invalid key.\n", 13);
+            return -1;
+        } else if (hex2bin(key, argv[2]) != 16) {
+            write(2, "invalid key.\n", 13);
+            return -1;
+        }
+    }
+    return 0;
+}
 
 int main(int argc, char **argv) {
     int     ifd      = 0;
     char    *elf     = NULL;
     size_t  elf_size = 0;
+    unsigned char key[16];
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <program>\n", argv[0]);
+    if (argc < 2 || argc > 3) {
+        fprintf(stderr, "Usage: %s <program> [key]\n", argv[0]);
+        return 1;
+    }
+
+    if (get_key(key, argc, argv) < 0) {
         return 1;
     }
 
@@ -73,9 +102,9 @@ int main(int argc, char **argv) {
 
     int ret = 0;
     if (hdr->e_machine == EM_X86_64)
-        ret = pack_elf64(elf, elf_size);
+        ret = pack_elf64(elf, elf_size, key);
     else
-        ret = pack_elf32(elf, elf_size);
+        ret = pack_elf32(elf, elf_size, key);
 
     free(elf);
     return ret != 0;

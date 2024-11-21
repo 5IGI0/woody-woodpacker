@@ -18,7 +18,7 @@ void print_key(unsigned char *key);
         (intptr_t)(offset), (intptr_t)(elem_count),                 \
         (intptr_t)(elem_size), (intptr_t)(size)) < 0) return (ret)
 
-int pack_elf32(const char *input_elf, size_t input_size);
-int pack_elf64(const char *input_elf, size_t input_size);
+int pack_elf32(const char *input_elf, size_t input_size, unsigned char *key);
+int pack_elf64(const char *input_elf, size_t input_size, unsigned char *key);
 
 #endif

@@ -1,8 +1,5 @@
-#define _GNU_SOURCE
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -31,7 +28,7 @@ static inline uintptr_t prepare_program_headers(char *elf, size_t size, size_t o
     ASSERT_OFFSET(hdr->e_phoff, hdr->e_phnum, hdr->e_phentsize, size, 0);
 
     /* COPY OLD PHs */
-    ft_memcpy(elf + ph_offset, elf + hdr->e_phoff, hdr->e_phnum * hdr->e_phentsize);// TODO: remove
+    ft_memcpy(elf + ph_offset, elf + hdr->e_phoff, hdr->e_phnum * hdr->e_phentsize);
     hdr->e_phoff = ph_offset;
 
     /* FIX PT_PHDR / FIND FREE VADDR / PATCH .text PH */
@@ -123,17 +120,14 @@ static const ElfT(Shdr) *find_text(const char *elf, size_t size) {
     return NULL;
 }
 
-static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintptr_t bootloader_offset, ElfT(Shdr) *text_hdr) {
+static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintptr_t bootloader_offset, ElfT(Shdr) *text_hdr, unsigned char *key) {
     ElfT(Ehdr) *hdr = (ElfT(Ehdr) *)elf;
-    int fd = open("/dev/urandom", O_RDONLY);
-    unsigned char key[16];
-    read(fd, key, 16);
     print_key(key);
-    close(fd);
+
     /* ENCRYPT .text */
     text_hdr->sh_flags |= SHF_WRITE;
     for (size_t i = 0; i < text_hdr->sh_size; i++) {
-        elf[text_hdr->sh_offset + i] ^= key[i % sizeof(key)];
+        elf[text_hdr->sh_offset + i] ^= key[i % 16];
     }
 
     /* ADD THE BOOTLOADER */
@@ -148,10 +142,10 @@ static inline void setup_bootloader(char *elf, uintptr_t bootloader_vaddr, uintp
     *plch = hdr->e_entry - text_hdr->sh_addr;
     plch = find_32_placeholder(PLACEHOLDER_TEXT_SIZE, elf+bootloader_offset, bootloader_len);
     *plch = text_hdr->sh_size;
-    ft_memcpy(find_128_placeholder(PLACEHOLDER_XOR_KEY, elf+bootloader_offset, bootloader_len), key, sizeof(key));
+    ft_memcpy(find_128_placeholder(PLACEHOLDER_XOR_KEY, elf+bootloader_offset, bootloader_len), key, 16);
 }
 
-int pack_elf(const char *input_elf, size_t input_size) {
+int pack_elf(const char *input_elf, size_t input_size, unsigned char *key) {
     char             *elf;
     size_t           elf_size;
     ElfT(Shdr)       *text_hdr;
@@ -187,7 +181,7 @@ int pack_elf(const char *input_elf, size_t input_size) {
         return -1;
     }
 
-    setup_bootloader(elf, available_vaddr + (bootloader_offset - ph_offset), bootloader_offset, text_hdr);
+    setup_bootloader(elf, available_vaddr + (bootloader_offset - ph_offset), bootloader_offset, text_hdr, key);
 
     /* write */
     int ofd = open("woody", O_CREAT|O_WRONLY|O_TRUNC, 00711);
